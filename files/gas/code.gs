@@ -1,11 +1,12 @@
 "use strict";
-
-
+let DRIVEID = PropertiesService.getUserProperties().getProperty('DRIVEID')
+const SHEETID = PropertiesService.getUserProperties().getProperty('SHEETID')
 
 function onOpen() {
+  
   let ui = SpreadsheetApp.getUi()
-
   ui.createMenu('CSV Import').addItem('Add File', "showModal").addToUi()
+  PropertiesService.getUserProperties().setProperty("SHEETID",SpreadsheetApp.getActive().getId())
 
 }
 
@@ -15,11 +16,24 @@ function showModal() {
     .setHeight(300)
 
   SpreadsheetApp.getUi()
-    .showModalDialog(sideModal, "Add File");
+    .showModalDialog(sideModal, "Import CSV");
+}
+
+function fetchFolderID() {
+  try {
+    let dFolder = DriveApp.getFoldersByName('StaffingOutlookUpload')
+    let folder = dFolder.next()
+    PropertiesService.getUserProperties().setProperty('DRIVEID',folder.getId())
+
+  } catch {
+    let dFolder = DriveApp.createFolder('StaffingOutlookUpload')
+    PropertiesService.getUserProperties().setProperty('DRIVEID',dFolder.getId())
+  }
+  console.log(PropertiesService.getUserProperties().getProperty('DRIVEID'))
 }
 
 function uploadFile(formVar) {
-
+    fetchFolderID()
     const driveFolder = DriveApp.getFolderById(DRIVEID);
     const fileUpload = Utilities.newBlob(Utilities.base64Decode(formVar.data), formVar.mimeType, formVar.fileName);
     const fileInDrive = driveFolder.createFile(fileUpload);
@@ -27,23 +41,26 @@ function uploadFile(formVar) {
 }
 
 function clearData(){
+  
+
   const sh = SpreadsheetApp.openById(SHEETID).getSheetByName('RAW')
+  SpreadsheetApp.getActiveSpreadsheet().toast('Cleaning Previously Uploaded Data','Status',2)
   sh.getRange("A2:M").clearContent()
   
 }
 
+
 function test(){
- // Logs the name of every file in the user's Drive.
-let files = DriveApp.getFolderById(DRIVEID).getFiles();
-while (files.hasNext()) {
-  var file = files.next();
-  console.log(file.getName());
+
+
+Logger.log(PropertiesService.getUserProperties().getProperties())
+
 }
-}
+
 
 function importCSV(){
   clearData()
-let files = DriveApp.getFolderById(DRIVEID).getFiles();
+  let files = DriveApp.getFolderById(DRIVEID).getFiles();
   let data = [];
 
 while (files.hasNext()) {
@@ -58,6 +75,8 @@ while (files.hasNext()) {
   }
 }
 
+  SpreadsheetApp.getActiveSpreadsheet().toast('Pasting Uploaded CSV to Sheets','Status',2)
+
 let sh = SpreadsheetApp.openById(SHEETID).getSheetByName('RAW')
 sh.getRange(2,1,data.length,data[0].length).setValues(data)
 
@@ -65,7 +84,7 @@ sh.getRange(2,1,data.length,data[0].length).setValues(data)
   // const sh = SpreadsheetApp.openById(SHEETID).getSheetByName('RAW')
 
   // sh.getRange(2,1,data.length, data[0].length).setValues(data)
-
+  SpreadsheetApp.getActiveSpreadsheet().toast('Import Complete','Status',5)
 
 
   
